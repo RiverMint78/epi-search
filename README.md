@@ -61,3 +61,49 @@
 
 - 深度为 $D$ 的标准 BFS 复杂度为 $O(B^D)$。
 - 深度为 $M$、迭代 $N$ 次的块搜索（其中 $N \times M \approx D$）复杂度只有 $O(N \times B^M)$。
+
+## 5. 使用指南
+
+### 搜索工具 (Rust)
+
+编译并运行:
+
+```powershell
+cargo run -r -- --target 114514 -m 5 -n 3 --constants e,pi,phi
+```
+
+#### 常用参数说明
+
+- `-V, --target`: 目标数值（必填）。
+- `-m, --max-ops`: 每个块的最大操作符数量（默认 4）。
+- `-n, --terms`: 迭代项数。例如 3 表示结果将形如 $A \pm B \pm C$（默认 3）。
+- `-t, --top-k`: 每一轮保留的最优算式数量（默认 20）。
+- `-c, --constants`: 初始常量池，支持 `e`, `pi`, `phi`, `sqrt2`, `ln2`（默认全选）。
+- `-r, --results`: 最终打印出的结果数量（默认 5）。
+- `-w, --workspace-size`: 搜索工作区大小（默认 5,000,000）。
+
+### 分析工具 (Python)
+
+使用 `analyze.py` 对搜索结果进行符号化简、LaTeX 渲染和高精度验证。
+
+**环境依赖**：需要安装 `sympy`。
+
+```powershell
+pip install sympy
+```
+
+**运行方式**：
+
+```powershell
+python analyze.py "((pi^2)+e)"
+```
+
+如果不传入参数，脚本将运行其内部示例。
+
+**功能说明**：
+
+- **Original**: 原始算式。
+- **Simplified**: 符号化简后的算式。
+- **Expanded**: 全展开算式。
+- **LaTeX**: 提供 Original、Simplified 和 Expanded 三种版本的 LaTeX 代码。
+- **Value**: 提供 64 位精度的数值评估。
