@@ -20,7 +20,7 @@ fn fmt_num(n: usize) -> String {
 #[command(author, version, about, long_about = None)]
 struct Args {
     /// Target value T to approximate
-    #[arg(short = 'V', long, default_value_t = 20.0)]
+    #[arg(short = 'V', long)]
     target: f64,
 
     /// Maximum number of operators per term (comma separated for each iteration)

@@ -69,7 +69,7 @@
 编译并运行:
 
 ```powershell
-cargo run -r -- --target 114514 -m 5 -n 3 --constants e,pi,phi
+cargo run -r -- --target 114514 -m 4,3,2,3 -n 4 --constants e,pi,phi
 ```
 
 #### 常用参数说明
