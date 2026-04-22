@@ -43,9 +43,18 @@ struct Args {
     #[arg(short, long, default_value_t = 50000000)]
     gen_limit: usize,
 
-    /// Initial constants to use (e, pi, phi, sqrt2)
-    #[arg(short, long, value_delimiter = ',', default_value = "e,pi")]
+    /// Initial constants to use (e, pi, phi, sqrt2, ln2)
+    #[arg(
+        short,
+        long,
+        value_delimiter = ',',
+        default_value = "e,pi,phi,sqrt2,ln2"
+    )]
     constants: Vec<String>,
+
+    /// Number of results to show
+    #[arg(short, long, default_value_t = 5)]
+    results: usize,
 }
 
 /// Run a block search
@@ -111,7 +120,7 @@ fn run_block_search(
                 .unwrap_or(std::cmp::Ordering::Equal)
         }
     });
-    
+
     all_candidates.dedup_by(|a, b| (a.val - b.val).abs() < 1e-18);
     all_candidates
 }
@@ -124,6 +133,7 @@ fn main() {
     let top_k = args.top_k;
     let workspace_size = args.workspace_size;
     let gen_limit = args.gen_limit;
+    let results = args.results;
 
     println!();
     println!("  epi-search (Targeted Iterative Search)");
@@ -132,6 +142,7 @@ fn main() {
     println!("  ops/term:  {}", max_ops);
     println!("  terms:     {}", terms_count);
     println!("  top_k:     {}", top_k);
+    println!("  results:   {}", results);
     println!(
         "  workspace: {} (per block search)",
         fmt_num(workspace_size)
@@ -337,7 +348,7 @@ fn main() {
     println!("  time: {:.2?}", elapsed);
     println!();
 
-    for (idx, node) in pool.iter().enumerate().take(5) {
+    for (idx, node) in pool.iter().enumerate().take(results) {
         let err = node.val - target;
         println!("  #{} [{:+.e}]", idx + 1, err);
         println!("  Value: {}", node.val);
