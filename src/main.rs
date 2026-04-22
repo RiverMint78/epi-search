@@ -23,9 +23,9 @@ struct Args {
     #[arg(short = 'V', long, default_value_t = 20.0)]
     target: f64,
 
-    /// Maximum number of operators per term
-    #[arg(short, long, default_value_t = 4)]
-    max_ops: usize,
+    /// Maximum number of operators per term (comma separated for each iteration)
+    #[arg(short, long, value_delimiter = ',', default_value = "4")]
+    max_ops: Vec<usize>,
 
     /// Number of terms to combine (iterations)
     #[arg(short = 'n', long, default_value_t = 3)]
@@ -128,18 +128,29 @@ fn run_block_search(
 fn main() {
     let args = Args::parse();
     let target = args.target;
-    let max_ops = args.max_ops;
     let terms_count = args.terms;
     let top_k = args.top_k;
     let workspace_size = args.workspace_size;
     let gen_limit = args.gen_limit;
     let results = args.results;
 
+    // Helper to get max_ops for a specific step (1-indexed step)
+    let get_max_ops = |step: usize| {
+        let idx = step - 1;
+        if args.max_ops.len() == 1 {
+            args.max_ops[0]
+        } else if idx < args.max_ops.len() {
+            args.max_ops[idx]
+        } else {
+            *args.max_ops.last().unwrap_or(&4)
+        }
+    };
+
     println!();
     println!("  epi-search (Targeted Iterative Search)");
     println!("  -------------------------------------");
     println!("  target:    {}", target);
-    println!("  ops/term:  {}", max_ops);
+    println!("  ops/term:  {:?}", args.max_ops);
     println!("  terms:     {}", terms_count);
     println!("  top_k:     {}", top_k);
     println!("  results:   {}", results);
@@ -203,7 +214,7 @@ fn main() {
     let mut pool = run_block_search(
         target,
         init_nodes.clone(),
-        max_ops,
+        get_max_ops(1),
         workspace_size,
         gen_limit,
         "Initial",
@@ -239,12 +250,14 @@ fn main() {
                 let sub_workspace = workspace_size / rayon::current_num_threads();
                 let sub_gen_limit = gen_limit / rayon::current_num_threads();
 
+                let current_max_ops = get_max_ops(step);
+
                 // Target 1: T approx target - expr (for expr + T)
                 let residual_add = target - expr.val;
                 let add_corrections = run_block_search(
                     residual_add,
                     init_nodes.clone(),
-                    max_ops,
+                    current_max_ops,
                     sub_workspace,
                     sub_gen_limit,
                     "",
@@ -267,7 +280,7 @@ fn main() {
                 let sub_corrections = run_block_search(
                     residual_sub,
                     init_nodes.clone(),
-                    max_ops,
+                    current_max_ops,
                     sub_workspace,
                     sub_gen_limit,
                     "",
