@@ -40,17 +40,17 @@ $$
 
 ### The Constant Glossary
 
-* **$1$ (Unity)**: The singular atom of mathematics and the bridge between nothingness and infinity. ($1.0$)
-* **$e$ (Euler's Number)**: The heartbeat of calculus; the unique base where growth rate equals its own state. ($\approx 2.71828$)
-* **$\pi$ (Pi)**: The infinite echo of the circle, weaving geometry into the fabric of trigonometry. ($\approx 3.14159$)
-* **$\phi$ (Golden Ratio)**: The limit of Fibonacci sequences and aesthetic proportion. ($\approx 1.61803$)
-* **$\sqrt{2}$ (Pythagoras' Constant)**: The first crack in the wall of rational; the diagonal that defied the ancients. ($\approx 1.41421$)
-* **$\ln(2)$ (Natural logarithm of 2)**: The temporal soul of exponential growth; the constant of doubling and decay. ($\approx 0.69314$)
-* **$\gamma$ (Euler–Mascheroni)**: The elusive shadow between discrete summation and continuous integration. ($\approx 0.57721$)
-* **$G$ (Catalan's Constant)**: A crystalline mystery of the combinatorial landscape. ($\approx 0.91596$)
-* **$\zeta(3)$ (Apéry's Constant)**: A lonely outpost in number theory; the deep, irrational secret of the reciprocal cubes. ($\approx 1.20205$)
-* **$A$ (Glaisher–Kinkelin)**: The asymptotic ghost of the hyperfactorial, haunting the Gamma function. ($\approx 1.28242$)
-* **$\delta$ & $\alpha$ (Feigenbaum Constants)**: The universal rhythm of turbulence; the precise threshold where order dissolves into chaos. ($\delta \approx 4.66920, \alpha \approx 2.50290$)
+* **$1$ (Unity)**: The primordial monad; the arithmetic singularity that bridges the abyss between vacuity and infinity. ($1.0$)
+* **$e$ (Euler's Number)**: The kinetic pulse of the continuum; the unique transcendental base where the rate of change is an exact mirror of its own instantaneous state. ($\approx 2.71828$)
+* **$\pi$ (Pi)**: The transcendental curvature of space; an infinite cadence that weaves the Euclidean ideal into the periodic fabric of trigonometry. ($\approx 3.14159$)
+* **$\phi$ (Golden Ratio)**: A persistent whisper of self-similarity that governs the asymptotic limits of recursive growth and the optimal distribution of matter. ($\approx 1.61803$)
+* **$\sqrt{2}$ (Pythagoras' Constant)**: The foundational rupture of Hellenic logic; the incommensurable diagonal that shattered the hegemony of the rational integer. ($\approx 1.41421$)
+* **$\ln(2)$ (Natural logarithm of 2)**: The logarithmic pivot of duality; the temporal constant governing the bifurcation of growth and the entropy of half-lives. ($\approx 0.69314$)
+* **$\gamma$ (Euler–Mascheroni)**: The liminal residue of the harmonic series; the elusive asymptote separating the discrete summation of integers from the fluid grace of the integral. ($\approx 0.57721$)
+* **$G$ (Catalan's Constant)**: A poly-logarithmic relic; a crystalline enigma embedded within the combinatorial architecture of the plane. ($\approx 0.91596$)
+* **$\zeta(3)$ (Apéry's Constant)**: A defiant fortress in number theory; the irrational heartbeat of reciprocal cubes that remains resistant to closed-form elegance. ($\approx 1.20205$)
+* **$A$ (Glaisher–Kinkelin)**: The spectral limit of the hyper-factorial; an asymptotic phantom that bridges the hierarchy of Gamma functions. ($\approx 1.28242$)
+* **$\delta$ & $\alpha$ (Feigenbaum Constants)**: The universal metronome of entropy; the precise thresholds where deterministic systems succumb to the recursive pull of turbulence. ($\delta \approx 4.66920, \alpha \approx 2.50290$)
 
 ### #1
 
