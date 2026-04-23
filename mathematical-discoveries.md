@@ -31,3 +31,39 @@ $$
 \approx
 114514.1919810
 $$
+
+---
+
+## Uni-*BEAST*-al Formulae
+
+> This series demonstrates the universal convergence of disparate mathematical constants toward a singular point of **TRUTH**.
+
+### The Constant Glossary
+
+* **$1$ (Unity)**: The singular atom of mathematics and the bridge between nothingness and infinity. ($1.0$)
+* **$e$ (Euler's Number)**: The heartbeat of calculus; the unique base where growth rate equals its own state. ($\approx 2.71828$)
+* **$\pi$ (Pi)**: The infinite echo of the circle, weaving geometry into the fabric of trigonometry. ($\approx 3.14159$)
+* **$\phi$ (Golden Ratio)**: The limit of Fibonacci sequences and aesthetic proportion. ($\approx 1.61803$)
+* **$\sqrt{2}$ (Pythagoras' Constant)**: The first crack in the wall of rational; the diagonal that defied the ancients. ($\approx 1.41421$)
+* **$\ln(2)$ (Natural logarithm of 2)**: The temporal soul of exponential growth; the constant of doubling and decay. ($\approx 0.69314$)
+* **$\gamma$ (Euler–Mascheroni)**: The elusive shadow between discrete summation and continuous integration. ($\approx 0.57721$)
+* **$G$ (Catalan's Constant)**: A crystalline mystery of the combinatorial landscape. ($\approx 0.91596$)
+* **$\zeta(3)$ (Apéry's Constant)**: A lonely outpost in number theory; the deep, irrational secret of the reciprocal cubes. ($\approx 1.20205$)
+* **$A$ (Glaisher–Kinkelin)**: The asymptotic ghost of the hyperfactorial, haunting the Gamma function. ($\approx 1.28242$)
+* **$\delta$ & $\alpha$ (Feigenbaum Constants)**: The universal rhythm of turbulence; the precise threshold where order dissolves into chaos. ($\delta \approx 4.66920, \alpha \approx 2.50290$)
+
+### #1
+
+$$
+e^{\delta^{\ln(2)}} + \left(e^{\delta} - \phi\right)^{\alpha} - \zeta(3) - \gamma^{e} e^{- e \delta}
+\approx
+114514.1919810
+$$
+
+### #2
+
+$$
+\delta \left(G - \gamma\right)^{- \zeta(3)} + \left(e^{\delta} - \phi\right)^{\alpha} + \frac{\gamma^{\pi \delta} \left(\frac{1}{\alpha}\right)^{\pi}}{G}
+\approx
+114514.1919810
+$$
