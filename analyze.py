@@ -1,5 +1,5 @@
 import sympy
-from sympy import pi, E, simplify, latex, Float
+
 
 def analyze_expression(expr_str):
     # Preprocess
@@ -18,7 +18,7 @@ def analyze_expression(expr_str):
     expr = sympy.parse_expr(clean_expr, local_dict=local_dict)
     
     # Simplify and expand
-    simplified_expr = simplify(expr)
+    simplified_expr = sympy.simplify(expr)
     expanded_expr = sympy.expand(simplified_expr)
     
     # LaTeX generation
@@ -71,5 +71,5 @@ if __name__ == "__main__":
     print("\n[LaTeX (Expanded)]")
     print(result["latex_expanded"])
     
-    print(f"\n[Value]")
+    print("\n[Value]")
     print(result["value"])

@@ -1,3 +1,6 @@
+#[global_allocator]
+static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
+
 use clap::Parser;
 use indicatif::{ProgressBar, ProgressStyle};
 use rayon::prelude::*;
@@ -36,11 +39,11 @@ struct Args {
     top_k: usize,
 
     /// Workspace size for each block search
-    #[arg(short, long, default_value_t = 5000000)]
+    #[arg(short, long, default_value_t = 5_000_000)]
     workspace_size: usize,
 
     /// Max generated expressions per level in block search
-    #[arg(short, long, default_value_t = 50000000)]
+    #[arg(short, long, default_value_t = 100_000_000)]
     gen_limit: usize,
 
     /// Initial constants to use (e, pi, phi, sqrt2, ln2)
@@ -166,33 +169,54 @@ fn main() {
     // Helper to build init nodes
     let get_init_nodes = |names: &[String]| {
         let mut nodes = Vec::new();
+        let mut current_id = 0u32;
         for name in names {
             match name.to_lowercase().as_str() {
-                "e" => nodes.push(std::sync::Arc::new(epi_search::MathNode {
-                    tree: epi_search::ExprTree::Leaf("e"),
-                    val: epi_search::E_VAL,
-                    complexity: 0,
-                })),
-                "pi" => nodes.push(std::sync::Arc::new(epi_search::MathNode {
-                    tree: epi_search::ExprTree::Leaf("pi"),
-                    val: epi_search::PI_VAL,
-                    complexity: 0,
-                })),
-                "phi" => nodes.push(std::sync::Arc::new(epi_search::MathNode {
-                    tree: epi_search::ExprTree::Leaf("phi"),
-                    val: epi_search::PHI_VAL,
-                    complexity: 0,
-                })),
-                "sqrt2" => nodes.push(std::sync::Arc::new(epi_search::MathNode {
-                    tree: epi_search::ExprTree::Leaf("sqrt2"),
-                    val: epi_search::SQRT2_VAL,
-                    complexity: 0,
-                })),
-                "ln2" => nodes.push(std::sync::Arc::new(epi_search::MathNode {
-                    tree: epi_search::ExprTree::Leaf("ln2"),
-                    val: epi_search::LN2_VAL,
-                    complexity: 0,
-                })),
+                "e" => {
+                    nodes.push(std::sync::Arc::new(epi_search::MathNode {
+                        tree: epi_search::ExprTree::Leaf("e"),
+                        val: epi_search::E_VAL,
+                        complexity: 0,
+                        id: current_id,
+                    }));
+                    current_id += 1;
+                }
+                "pi" => {
+                    nodes.push(std::sync::Arc::new(epi_search::MathNode {
+                        tree: epi_search::ExprTree::Leaf("pi"),
+                        val: epi_search::PI_VAL,
+                        complexity: 0,
+                        id: current_id,
+                    }));
+                    current_id += 1;
+                }
+                "phi" => {
+                    nodes.push(std::sync::Arc::new(epi_search::MathNode {
+                        tree: epi_search::ExprTree::Leaf("phi"),
+                        val: epi_search::PHI_VAL,
+                        complexity: 0,
+                        id: current_id,
+                    }));
+                    current_id += 1;
+                }
+                "sqrt2" => {
+                    nodes.push(std::sync::Arc::new(epi_search::MathNode {
+                        tree: epi_search::ExprTree::Leaf("sqrt2"),
+                        val: epi_search::SQRT2_VAL,
+                        complexity: 0,
+                        id: current_id,
+                    }));
+                    current_id += 1;
+                }
+                "ln2" => {
+                    nodes.push(std::sync::Arc::new(epi_search::MathNode {
+                        tree: epi_search::ExprTree::Leaf("ln2"),
+                        val: epi_search::LN2_VAL,
+                        complexity: 0,
+                        id: current_id,
+                    }));
+                    current_id += 1;
+                }
                 _ => {}
             }
         }
@@ -202,6 +226,7 @@ fn main() {
                 tree: epi_search::ExprTree::Leaf("e"),
                 val: epi_search::E_VAL,
                 complexity: 0,
+                id: 0,
             }));
         }
         nodes
@@ -271,6 +296,7 @@ fn main() {
                             tree: epi_search::ExprTree::Node('+', expr.clone(), t.clone()),
                             val: new_val,
                             complexity: expr.complexity + t.complexity + 1,
+                            id: 0,
                         }));
                     }
                 }
@@ -294,6 +320,7 @@ fn main() {
                             tree: epi_search::ExprTree::Node('-', expr.clone(), t.clone()),
                             val: new_val,
                             complexity: expr.complexity + t.complexity + 1,
+                            id: 0,
                         }));
                     }
                 }

@@ -18,6 +18,7 @@ pub struct MathNode {
     pub tree: ExprTree,
     pub val: f64,
     pub complexity: usize,
+    pub id: u32,
 }
 
 impl MathNode {
@@ -38,6 +39,7 @@ pub struct SearchEnv {
     pub best_diff: f64,
     pub max_nodes: Vec<usize>,
     pub max_gen_nodes: usize,
+    pub next_id: u32,
 }
 
 impl SearchEnv {
@@ -51,6 +53,13 @@ impl SearchEnv {
         let best_match = init_nodes[0].clone();
         let best_diff = (best_match.val - target).abs();
 
+        let mut next_id = 0;
+        for node in &init_nodes {
+            if node.id >= next_id {
+                next_id = node.id + 1;
+            }
+        }
+
         Self {
             target,
             levels: vec![init_nodes],
@@ -58,6 +67,7 @@ impl SearchEnv {
             best_diff,
             max_nodes,
             max_gen_nodes,
+            next_id,
         }
     }
 
@@ -116,12 +126,15 @@ impl SearchEnv {
                 let (left_nodes, right_nodes) = self.get_input_slices(i, k - 1 - i);
                 let progress_cb = Arc::clone(&progress_cb);
 
-                let chunk_size = (left_nodes.len() / (num_threads * 8)).max(1);
+                let chunk_size = (left_nodes.len() / (num_threads * 8)).max(256);
 
                 left_nodes.par_chunks(chunk_size).flat_map(move |chunk| {
-                    let mut local_nodes = Vec::with_capacity(chunk.len() * right_nodes.len() * 5);
+                    let estimated_cap = (chunk.len() * right_nodes.len() * 4).min(32768);
+                    let mut local_nodes = Vec::with_capacity(estimated_cap);
                     for l in chunk {
                         for r in right_nodes {
+                            let is_ordered = l.id <= r.id;
+
                             macro_rules! push_node {
                                 ($op:expr, $val:expr) => {
                                     let val = $val;
@@ -130,16 +143,20 @@ impl SearchEnv {
                                             tree: ExprTree::Node($op, Arc::clone(l), Arc::clone(r)),
                                             val,
                                             complexity: l.complexity + r.complexity + 1,
+                                            id: 0, // place holder
                                         }));
                                     }
                                 };
                             }
 
-                            push_node!('+', l.val + r.val);
-                            push_node!('-', l.val - r.val);
-                            push_node!('*', l.val * r.val);
+                            if is_ordered {
+                                push_node!('+', l.val + r.val);
+                                push_node!('*', l.val * r.val);
+                            }
 
-                            if r.val.abs() > 1e-30_f64 {
+                            push_node!('-', l.val - r.val);
+
+                            if r.val.abs() > 1e-24_f64 {
                                 push_node!('/', l.val / r.val);
                             }
 
@@ -160,22 +177,36 @@ impl SearchEnv {
         let limit = self.max_nodes.get(k - 1).cloned().unwrap_or(usize::MAX);
 
         status_cb("sorting");
-        current_level.par_sort_unstable_by(|a, b| {
+        let cmp_func = |a: &Arc<MathNode>, b: &Arc<MathNode>| {
             let diff_a = (a.val - target).abs();
             let diff_b = (b.val - target).abs();
 
-            if (diff_a - diff_b).abs() < 1e-30_f64 {
+            if (diff_a - diff_b).abs() < 1e-12_f64 {
                 a.complexity.cmp(&b.complexity)
             } else {
                 diff_a
                     .partial_cmp(&diff_b)
                     .unwrap_or(std::cmp::Ordering::Equal)
             }
-        });
+        };
 
         if current_level.len() > limit {
+            current_level.select_nth_unstable_by(limit, cmp_func);
             current_level.truncate(limit);
+            current_level.par_sort_unstable_by(cmp_func);
+        } else {
+            current_level.par_sort_unstable_by(cmp_func);
         }
+
+        for (i, node_arc) in current_level.iter_mut().enumerate() {
+            if let Some(node) = Arc::get_mut(node_arc) {
+                node.id = self.next_id + i as u32;
+            } else {
+                panic!("Unexpected Arc sharing detected during id assignment!");
+            }
+        }
+
+        self.next_id += current_level.len() as u32;
 
         // Update best match
         if let Some(level_best) = current_level.first() {
