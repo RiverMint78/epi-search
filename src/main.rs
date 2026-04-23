@@ -47,12 +47,7 @@ struct Args {
     gen_limit: usize,
 
     /// Initial constants to use (e, pi, phi, sqrt2, ln2)
-    #[arg(
-        short,
-        long,
-        value_delimiter = ',',
-        default_value = "e,pi,phi,sqrt2,ln2"
-    )]
+    #[arg(short, long, value_delimiter = ',', default_value = "e,pi")]
     constants: Vec<String>,
 
     /// Number of results to show
@@ -172,10 +167,19 @@ fn main() {
         let mut current_id = 0u32;
         for name in names {
             match name.to_lowercase().as_str() {
+                "1" => {
+                    nodes.push(std::sync::Arc::new(epi_search::MathNode {
+                        tree: epi_search::ExprTree::Leaf("1"),
+                        val: epi_search::ONE,
+                        complexity: 0,
+                        id: current_id,
+                    }));
+                    current_id += 1;
+                }
                 "e" => {
                     nodes.push(std::sync::Arc::new(epi_search::MathNode {
                         tree: epi_search::ExprTree::Leaf("e"),
-                        val: epi_search::E_VAL,
+                        val: epi_search::E,
                         complexity: 0,
                         id: current_id,
                     }));
@@ -184,7 +188,7 @@ fn main() {
                 "pi" => {
                     nodes.push(std::sync::Arc::new(epi_search::MathNode {
                         tree: epi_search::ExprTree::Leaf("pi"),
-                        val: epi_search::PI_VAL,
+                        val: epi_search::PI,
                         complexity: 0,
                         id: current_id,
                     }));
@@ -193,7 +197,7 @@ fn main() {
                 "phi" => {
                     nodes.push(std::sync::Arc::new(epi_search::MathNode {
                         tree: epi_search::ExprTree::Leaf("phi"),
-                        val: epi_search::PHI_VAL,
+                        val: epi_search::PHI,
                         complexity: 0,
                         id: current_id,
                     }));
@@ -202,7 +206,7 @@ fn main() {
                 "sqrt2" => {
                     nodes.push(std::sync::Arc::new(epi_search::MathNode {
                         tree: epi_search::ExprTree::Leaf("sqrt2"),
-                        val: epi_search::SQRT2_VAL,
+                        val: epi_search::SQRT2,
                         complexity: 0,
                         id: current_id,
                     }));
@@ -211,7 +215,61 @@ fn main() {
                 "ln2" => {
                     nodes.push(std::sync::Arc::new(epi_search::MathNode {
                         tree: epi_search::ExprTree::Leaf("ln2"),
-                        val: epi_search::LN2_VAL,
+                        val: epi_search::LN2,
+                        complexity: 0,
+                        id: current_id,
+                    }));
+                    current_id += 1;
+                }
+                "gamma" => {
+                    nodes.push(std::sync::Arc::new(epi_search::MathNode {
+                        tree: epi_search::ExprTree::Leaf("gamma"),
+                        val: epi_search::EULER,
+                        complexity: 0,
+                        id: current_id,
+                    }));
+                    current_id += 1;
+                }
+                "c" => {
+                    nodes.push(std::sync::Arc::new(epi_search::MathNode {
+                        tree: epi_search::ExprTree::Leaf("C"),
+                        val: epi_search::CATALAN,
+                        complexity: 0,
+                        id: current_id,
+                    }));
+                    current_id += 1;
+                }
+                "zeta3" => {
+                    nodes.push(std::sync::Arc::new(epi_search::MathNode {
+                        tree: epi_search::ExprTree::Leaf("zeta3"),
+                        val: epi_search::APERY,
+                        complexity: 0,
+                        id: current_id,
+                    }));
+                    current_id += 1;
+                }
+                "a" => {
+                    nodes.push(std::sync::Arc::new(epi_search::MathNode {
+                        tree: epi_search::ExprTree::Leaf("A"),
+                        val: epi_search::GLAISHER,
+                        complexity: 0,
+                        id: current_id,
+                    }));
+                    current_id += 1;
+                }
+                "delta" => {
+                    nodes.push(std::sync::Arc::new(epi_search::MathNode {
+                        tree: epi_search::ExprTree::Leaf("delta"),
+                        val: epi_search::FST_FEIGENBAUM,
+                        complexity: 0,
+                        id: current_id,
+                    }));
+                    current_id += 1;
+                }
+                "alpha" => {
+                    nodes.push(std::sync::Arc::new(epi_search::MathNode {
+                        tree: epi_search::ExprTree::Leaf("alpha"),
+                        val: epi_search::SND_FEIGENBAUM,
                         complexity: 0,
                         id: current_id,
                     }));
@@ -224,7 +282,7 @@ fn main() {
             // Fallback
             nodes.push(std::sync::Arc::new(epi_search::MathNode {
                 tree: epi_search::ExprTree::Leaf("e"),
-                val: epi_search::E_VAL,
+                val: epi_search::E,
                 complexity: 0,
                 id: 0,
             }));

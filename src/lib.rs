@@ -1,11 +1,18 @@
 use rayon::prelude::*;
 use std::sync::Arc;
 
-pub const E_VAL: f64 = std::f64::consts::E;
-pub const PI_VAL: f64 = std::f64::consts::PI;
-pub const PHI_VAL: f64 = std::f64::consts::GOLDEN_RATIO;
-pub const SQRT2_VAL: f64 = std::f64::consts::SQRT_2;
-pub const LN2_VAL: f64 = std::f64::consts::LN_2;
+pub const ONE: f64 = 1_f64;
+pub const E: f64 = std::f64::consts::E;
+pub const PI: f64 = std::f64::consts::PI;
+pub const PHI: f64 = std::f64::consts::GOLDEN_RATIO;
+pub const SQRT2: f64 = std::f64::consts::SQRT_2;
+pub const LN2: f64 = std::f64::consts::LN_2;
+pub const EULER: f64 = 0.5772156649015329_f64;
+pub const CATALAN: f64 = 0.915965594177219_f64;
+pub const APERY: f64 = 1.2020569031595942_f64;
+pub const GLAISHER: f64 = 1.2824271291006226_f64;
+pub const FST_FEIGENBAUM: f64 = 4.66920160910299_f64;
+pub const SND_FEIGENBAUM: f64 = 2.5029078750958926_f64;
 
 #[derive(Clone, Debug)]
 pub enum ExprTree {
