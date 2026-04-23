@@ -23,3 +23,11 @@ $$
 \approx
 114514.1919810
 $$
+
+## Abso*ROOT*
+
+$$
+\sqrt{2} + \left(\sqrt{2} \cdot 2^{\frac{2^{\frac{\sqrt{2}}{2}}}{2}} - \sqrt{2}\right)^{1 - \sqrt{2}} + 2^{\frac{\sqrt{2} \left(2 \sqrt{2}\right)^{\sqrt{2}} \left(\sqrt{2} + 2^{\frac{\sqrt{2}}{2}}\right)}{2}} + 2^{\frac{\sqrt{2} \left(2 \sqrt{2}\right)^{\sqrt{2} + 2^{\frac{\sqrt{2}}{2}}}}{2}} - \frac{\sqrt{2}}{2^{\left(2 \sqrt{2}\right)^{2 \sqrt{2}} - \sqrt{2}}}
+\approx
+114514.1919810
+$$
