@@ -73,7 +73,7 @@ fn run_block_search(
     let mut limits = Vec::with_capacity(max_ops);
     let sum_weights: usize = (1..=max_ops).sum();
     for k in 1..=max_ops {
-        let weight = max_ops - k + 1;
+        let weight = k;
         let limit = (workspace_size as f64 * weight as f64 / sum_weights as f64) as usize;
         limits.push(limit.max(1));
     }
