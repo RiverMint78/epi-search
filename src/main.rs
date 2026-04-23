@@ -24,11 +24,11 @@ use std::time::Instant;
 )]
 struct Args {
     /// Target value T to approximate
-    #[arg(short = 'V', long)]
+    #[arg(short = 'T', long)]
     target: f64,
 
     /// Maximum number of operators per term (comma separated for each iteration)
-    #[arg(short, long, value_delimiter = ',', default_value = "4")]
+    #[arg(short = 'm', long, value_delimiter = ',', default_value = "4")]
     max_ops: Vec<usize>,
 
     /// Number of terms to combine (iterations)
@@ -36,23 +36,23 @@ struct Args {
     terms: usize,
 
     /// Number of expressions to keep in the pool
-    #[arg(short, long, default_value_t = 20)]
+    #[arg(short = 'k', long, default_value_t = 20)]
     top_k: usize,
 
     /// Workspace size for each block search
-    #[arg(short, long, default_value_t = 5_000_000)]
+    #[arg(short = 'w', long, default_value_t = 5_000_000)]
     workspace_size: usize,
 
     /// Max generated expressions per level in block search
-    #[arg(short, long, default_value_t = 100_000_000)]
+    #[arg(short = 'g', long, default_value_t = 100_000_000)]
     gen_limit: usize,
 
     /// Initial constants to use (e, pi, phi, sqrt2, ln2, gamma, C, zeta3, A, delta, alpha, 1)
-    #[arg(short, long, value_delimiter = ',', default_value = "e,pi")]
+    #[arg(short = 'c', long, value_delimiter = ',', default_value = "e,pi")]
     constants: Vec<String>,
 
     /// Number of results to show
-    #[arg(short, long, default_value_t = 5)]
+    #[arg(short = 'r', long, default_value_t = 5)]
     result_cnt: usize,
 }
 
