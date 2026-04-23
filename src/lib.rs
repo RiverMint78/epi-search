@@ -14,6 +14,21 @@ pub const GLAISHER: f64 = 1.2824271291006226_f64;
 pub const FST_FEIGENBAUM: f64 = 4.66920160910299_f64;
 pub const SND_FEIGENBAUM: f64 = 2.5029078750958926_f64;
 
+pub const CONSTANT_SPECS: [(&str, &str, f64); 12] = [
+    ("1", "1", ONE),
+    ("e", "e", E),
+    ("pi", "pi", PI),
+    ("phi", "phi", PHI),
+    ("sqrt2", "sqrt2", SQRT2),
+    ("ln2", "ln2", LN2),
+    ("gamma", "gamma", EULER),
+    ("c", "C", CATALAN),
+    ("zeta3", "zeta3", APERY),
+    ("a", "A", GLAISHER),
+    ("delta", "delta", FST_FEIGENBAUM),
+    ("alpha", "alpha", SND_FEIGENBAUM),
+];
+
 #[derive(Clone, Debug)]
 pub enum ExprTree {
     Leaf(&'static str),

@@ -1,26 +1,24 @@
 #[global_allocator]
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
+mod cli_utils;
+
 use clap::Parser;
-use indicatif::{ProgressBar, ProgressStyle};
+use cli_utils::{StdProgress, fmt_num, get_init_nodes, get_max_ops};
 use rayon::prelude::*;
+use std::sync::Arc;
 use std::time::Instant;
 
-/// Format a number with comma separators
-fn fmt_num(n: usize) -> String {
-    let s = n.to_string();
-    let mut result = String::new();
-    for (i, ch) in s.chars().rev().enumerate() {
-        if i > 0 && i % 3 == 0 {
-            result.push(',');
-        }
-        result.push(ch);
-    }
-    result.chars().rev().collect()
-}
-
 #[derive(Parser)]
-#[command(author, version, about, long_about = None)]
+#[command(
+    author,
+    version,
+    about = "Targeted iterative expression search",
+    long_about = "Searches mathematical expressions that approximate a target value by iterative residual correction.\n\nAt each iteration, the solver keeps the top-K best expressions and tries additive/subtractive corrections from a fresh block search. This tends to improve approximation quality while controlling complexity.",
+    after_long_help = "Examples:\n  epi-search -V 1.41421356237 --max-ops 4 --terms 3 --constants e,pi,sqrt2\n  epi-search -V 0.915965 --max-ops 3,4,5 --terms 4 --top-k 30 --results 10\n\nTips:\n  - Use comma-separated --max-ops for per-step depth control (e.g. 3,4,5).\n  - Increase --workspace-size and --gen-limit for quality; lower them for speed.\n  - Add more --constants for a richer search basis.",
+    next_line_help = true,
+    color = clap::ColorChoice::Auto
+)]
 struct Args {
     /// Target value T to approximate
     #[arg(short = 'V', long)]
@@ -46,13 +44,13 @@ struct Args {
     #[arg(short, long, default_value_t = 100_000_000)]
     gen_limit: usize,
 
-    /// Initial constants to use (e, pi, phi, sqrt2, ln2)
+    /// Initial constants to use (e, pi, phi, sqrt2, ln2, gamma, C, zeta3, A, delta, alpha, 1)
     #[arg(short, long, value_delimiter = ',', default_value = "e,pi")]
     constants: Vec<String>,
 
     /// Number of results to show
     #[arg(short, long, default_value_t = 5)]
-    results: usize,
+    result_cnt: usize,
 }
 
 /// Run a block search
@@ -78,23 +76,14 @@ fn run_block_search(
     if !silent {
         for k in 1..=max_ops {
             let total_combinations = env.next_level_combinations();
-            let pb = ProgressBar::new(total_combinations as u64);
-            pb.set_style(
-                ProgressStyle::default_bar()
-                    .template(&format!(
-                        "  [{label}] depth {{msg}} [{{bar:30}}] {{pos}}/{{len}}"
-                    ))
-                    .unwrap()
-                    .progress_chars("=> "),
+            let progress = StdProgress::new(
+                format!("[{label}] depth {k}/{max_ops}"),
+                total_combinations as u64,
+                "comb/s",
             );
-            pb.set_message(format!("{k}/{max_ops}"));
 
-            env.search_next_level(
-                |inc| pb.inc(inc),
-                |_status| {
-                    pb.finish_and_clear();
-                },
-            );
+            env.search_next_level(|inc| progress.inc(inc as u64), |_status| ());
+            progress.finish();
         }
     } else {
         for _ in 1..=max_ops {
@@ -130,19 +119,7 @@ fn main() {
     let top_k = args.top_k;
     let workspace_size = args.workspace_size;
     let gen_limit = args.gen_limit;
-    let results = args.results;
-
-    // Helper to get max_ops for a specific step (1-indexed step)
-    let get_max_ops = |step: usize| {
-        let idx = step - 1;
-        if args.max_ops.len() == 1 {
-            args.max_ops[0]
-        } else if idx < args.max_ops.len() {
-            args.max_ops[idx]
-        } else {
-            *args.max_ops.last().unwrap_or(&4)
-        }
-    };
+    let result_cnt = args.result_cnt;
 
     println!();
     println!("  epi-search (Targeted Iterative Search)");
@@ -151,7 +128,7 @@ fn main() {
     println!("  ops/term:  {:?}", args.max_ops);
     println!("  terms:     {}", terms_count);
     println!("  top_k:     {}", top_k);
-    println!("  results:   {}", results);
+    println!("  results:   {}", result_cnt);
     println!(
         "  workspace: {} (per block search)",
         fmt_num(workspace_size)
@@ -161,135 +138,6 @@ fn main() {
 
     let start_time = Instant::now();
 
-    // Helper to build init nodes
-    let get_init_nodes = |names: &[String]| {
-        let mut nodes = Vec::new();
-        let mut current_id = 0u32;
-        for name in names {
-            match name.to_lowercase().as_str() {
-                "1" => {
-                    nodes.push(std::sync::Arc::new(epi_search::MathNode {
-                        tree: epi_search::ExprTree::Leaf("1"),
-                        val: epi_search::ONE,
-                        complexity: 0,
-                        id: current_id,
-                    }));
-                    current_id += 1;
-                }
-                "e" => {
-                    nodes.push(std::sync::Arc::new(epi_search::MathNode {
-                        tree: epi_search::ExprTree::Leaf("e"),
-                        val: epi_search::E,
-                        complexity: 0,
-                        id: current_id,
-                    }));
-                    current_id += 1;
-                }
-                "pi" => {
-                    nodes.push(std::sync::Arc::new(epi_search::MathNode {
-                        tree: epi_search::ExprTree::Leaf("pi"),
-                        val: epi_search::PI,
-                        complexity: 0,
-                        id: current_id,
-                    }));
-                    current_id += 1;
-                }
-                "phi" => {
-                    nodes.push(std::sync::Arc::new(epi_search::MathNode {
-                        tree: epi_search::ExprTree::Leaf("phi"),
-                        val: epi_search::PHI,
-                        complexity: 0,
-                        id: current_id,
-                    }));
-                    current_id += 1;
-                }
-                "sqrt2" => {
-                    nodes.push(std::sync::Arc::new(epi_search::MathNode {
-                        tree: epi_search::ExprTree::Leaf("sqrt2"),
-                        val: epi_search::SQRT2,
-                        complexity: 0,
-                        id: current_id,
-                    }));
-                    current_id += 1;
-                }
-                "ln2" => {
-                    nodes.push(std::sync::Arc::new(epi_search::MathNode {
-                        tree: epi_search::ExprTree::Leaf("ln2"),
-                        val: epi_search::LN2,
-                        complexity: 0,
-                        id: current_id,
-                    }));
-                    current_id += 1;
-                }
-                "gamma" => {
-                    nodes.push(std::sync::Arc::new(epi_search::MathNode {
-                        tree: epi_search::ExprTree::Leaf("gamma"),
-                        val: epi_search::EULER,
-                        complexity: 0,
-                        id: current_id,
-                    }));
-                    current_id += 1;
-                }
-                "c" => {
-                    nodes.push(std::sync::Arc::new(epi_search::MathNode {
-                        tree: epi_search::ExprTree::Leaf("C"),
-                        val: epi_search::CATALAN,
-                        complexity: 0,
-                        id: current_id,
-                    }));
-                    current_id += 1;
-                }
-                "zeta3" => {
-                    nodes.push(std::sync::Arc::new(epi_search::MathNode {
-                        tree: epi_search::ExprTree::Leaf("zeta3"),
-                        val: epi_search::APERY,
-                        complexity: 0,
-                        id: current_id,
-                    }));
-                    current_id += 1;
-                }
-                "a" => {
-                    nodes.push(std::sync::Arc::new(epi_search::MathNode {
-                        tree: epi_search::ExprTree::Leaf("A"),
-                        val: epi_search::GLAISHER,
-                        complexity: 0,
-                        id: current_id,
-                    }));
-                    current_id += 1;
-                }
-                "delta" => {
-                    nodes.push(std::sync::Arc::new(epi_search::MathNode {
-                        tree: epi_search::ExprTree::Leaf("delta"),
-                        val: epi_search::FST_FEIGENBAUM,
-                        complexity: 0,
-                        id: current_id,
-                    }));
-                    current_id += 1;
-                }
-                "alpha" => {
-                    nodes.push(std::sync::Arc::new(epi_search::MathNode {
-                        tree: epi_search::ExprTree::Leaf("alpha"),
-                        val: epi_search::SND_FEIGENBAUM,
-                        complexity: 0,
-                        id: current_id,
-                    }));
-                    current_id += 1;
-                }
-                _ => {}
-            }
-        }
-        if nodes.is_empty() {
-            // Fallback
-            nodes.push(std::sync::Arc::new(epi_search::MathNode {
-                tree: epi_search::ExprTree::Leaf("e"),
-                val: epi_search::E,
-                complexity: 0,
-                id: 0,
-            }));
-        }
-        nodes
-    };
-
     let init_nodes = get_init_nodes(&args.constants);
 
     // Initial pool
@@ -297,7 +145,7 @@ fn main() {
     let mut pool = run_block_search(
         target,
         init_nodes.clone(),
-        get_max_ops(1),
+        get_max_ops(&args.max_ops, 1),
         workspace_size,
         gen_limit,
         "Initial",
@@ -316,13 +164,11 @@ fn main() {
 
         use rayon::prelude::*;
 
-        let pb = ProgressBar::new(pool.len() as u64);
-        pb.set_style(
-            ProgressStyle::default_bar()
-                .template("  [Refining] {bar:30} {pos}/{len} ({eta})")
-                .unwrap()
-                .progress_chars("=> "),
-        );
+        let progress = Arc::new(StdProgress::new(
+            "[Refining]".to_string(),
+            pool.len() as u64,
+            "expr/s",
+        ));
 
         // For each expression in the pool, search for a targeted correction
         let candidates: Vec<std::sync::Arc<epi_search::MathNode>> = pool
@@ -333,7 +179,7 @@ fn main() {
                 let sub_workspace = workspace_size / rayon::current_num_threads();
                 let sub_gen_limit = gen_limit / rayon::current_num_threads();
 
-                let current_max_ops = get_max_ops(step);
+                let current_max_ops = get_max_ops(&args.max_ops, step);
 
                 // Target 1: T approx target - expr (for expr + T)
                 let residual_add = target - expr.val;
@@ -383,12 +229,12 @@ fn main() {
                     }
                 }
 
-                pb.inc(1);
+                progress.inc(1);
                 local_results
             })
             .collect();
 
-        pb.finish_and_clear();
+        progress.finish();
 
         // Update pool with best candidates
         let mut combined_pool = candidates;
@@ -441,12 +287,12 @@ fn main() {
     });
 
     println!();
-    println!("  result (Top results, prioritized positive error)");
+    println!("  result (positive first)");
     println!("  -----------------------------------------------");
     println!("  time: {:.2?}", elapsed);
     println!();
 
-    for (idx, node) in pool.iter().enumerate().take(results) {
+    for (idx, node) in pool.iter().enumerate().take(result_cnt) {
         let err = node.val - target;
         println!("  #{} [{:+.e}]", idx + 1, err);
         println!("  Value: {}", node.val);
