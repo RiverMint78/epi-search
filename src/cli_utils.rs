@@ -1,8 +1,11 @@
 use std::io::{self, Write};
+use std::io::IsTerminal;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, Instant};
+
+use clap::builder::styling::{AnsiColor, Effects, Styles};
 
 pub fn fmt_num(n: usize) -> String {
     let s = n.to_string();
@@ -14,6 +17,41 @@ pub fn fmt_num(n: usize) -> String {
         result.push(ch);
     }
     result.chars().rev().collect()
+}
+
+fn color_enabled() -> bool {
+    std::io::stdout().is_terminal() && std::env::var_os("NO_COLOR").is_none()
+}
+
+fn paint(text: &str, code: &str) -> String {
+    if color_enabled() {
+        format!("\x1b[{code}m{text}\x1b[0m")
+    } else {
+        text.to_string()
+    }
+}
+
+pub fn cli_label(text: &str) -> String {
+    paint(text, "1;36")
+}
+
+pub fn cli_title(text: &str) -> String {
+    paint(text, "1")
+}
+
+pub fn cli_good(text: &str) -> String {
+    paint(text, "1;32")
+}
+
+pub fn clap_styles() -> Styles {
+    Styles::styled()
+        .header(AnsiColor::Cyan.on_default().effects(Effects::BOLD))
+        .usage(AnsiColor::Green.on_default().effects(Effects::BOLD))
+        .literal(AnsiColor::Green.on_default().effects(Effects::BOLD))
+        .placeholder(AnsiColor::Yellow.on_default())
+        .valid(AnsiColor::Green.on_default())
+        .invalid(AnsiColor::Red.on_default().effects(Effects::BOLD))
+        .error(AnsiColor::Red.on_default().effects(Effects::BOLD))
 }
 
 fn fmt_duration(d: Duration) -> String {
@@ -79,7 +117,7 @@ pub struct StdProgress {
     current: AtomicU64,
     start: Instant,
     next_draw_ms: AtomicU64,
-    draw_lock: Mutex<()>,
+    last_line_len: Mutex<usize>,
 }
 
 impl StdProgress {
@@ -91,7 +129,7 @@ impl StdProgress {
             current: AtomicU64::new(0),
             start: Instant::now(),
             next_draw_ms: AtomicU64::new(0),
-            draw_lock: Mutex::new(()),
+            last_line_len: Mutex::new(0),
         }
     }
 
@@ -126,7 +164,7 @@ impl StdProgress {
 
         if self
             .next_draw_ms
-            .compare_exchange(next, elapsed_ms + 120, Ordering::Relaxed, Ordering::Relaxed)
+            .compare_exchange(next, elapsed_ms + 50, Ordering::Relaxed, Ordering::Relaxed)
             .is_ok()
         {
             self.draw(pos, false);
@@ -134,7 +172,7 @@ impl StdProgress {
     }
 
     fn draw(&self, pos: u64, done: bool) {
-        let _guard = self.draw_lock.lock().unwrap();
+        let mut last_len = self.last_line_len.lock().unwrap();
 
         let total = self.total.max(1);
         let clamped = pos.min(self.total);
@@ -156,8 +194,8 @@ impl StdProgress {
             0.0
         };
 
-        print!(
-            "\r  {} [{}] {:>6.2}% {}/{} eta {} {:>8.1} {}",
+        let mut line = format!(
+            "  {} [{}] {:>6.2}% {}/{} eta {} {:>8.1} {}",
             self.prefix,
             bar,
             pct * 100.0,
@@ -168,8 +206,17 @@ impl StdProgress {
             self.rate_unit,
         );
 
+        let line_len = line.len();
+        if *last_len > line_len {
+            line.push_str(&" ".repeat(*last_len - line_len));
+        }
+
+        print!("\r{}", line);
+        *last_len = line_len;
+
         if done {
             println!();
+            *last_len = 0;
         }
 
         let _ = io::stdout().flush();

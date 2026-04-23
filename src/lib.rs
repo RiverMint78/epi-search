@@ -148,7 +148,7 @@ impl SearchEnv {
                 let (left_nodes, right_nodes) = self.get_input_slices(i, k - 1 - i);
                 let progress_cb = Arc::clone(&progress_cb);
 
-                let chunk_size = (left_nodes.len() / (num_threads * 8)).max(256);
+                let chunk_size = (left_nodes.len() / (num_threads * 8)).max(64);
 
                 left_nodes.par_chunks(chunk_size).flat_map(move |chunk| {
                     let estimated_cap = (chunk.len() * right_nodes.len() * 4).min(32768);

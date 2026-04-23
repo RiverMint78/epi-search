@@ -4,7 +4,9 @@ static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 mod cli_utils;
 
 use clap::Parser;
-use cli_utils::{StdProgress, fmt_num, get_init_nodes, get_max_ops};
+use cli_utils::{
+    StdProgress, clap_styles, cli_good, cli_label, cli_title, fmt_num, get_init_nodes, get_max_ops,
+};
 use rayon::prelude::*;
 use std::sync::Arc;
 use std::time::Instant;
@@ -17,7 +19,8 @@ use std::time::Instant;
     long_about = "Searches mathematical expressions that approximate a target value by iterative residual correction.\n\nAt each iteration, the solver keeps the top-K best expressions and tries additive/subtractive corrections from a fresh block search. This tends to improve approximation quality while controlling complexity.",
     after_long_help = "Examples:\n  epi-search -V 1.41421356237 --max-ops 4 --terms 3 --constants e,pi,sqrt2\n  epi-search -V 0.915965 --max-ops 3,4,5 --terms 4 --top-k 30 --results 10\n\nTips:\n  - Use comma-separated --max-ops for per-step depth control (e.g. 3,4,5).\n  - Increase --workspace-size and --gen-limit for quality; lower them for speed.\n  - Add more --constants for a richer search basis.",
     next_line_help = true,
-    color = clap::ColorChoice::Auto
+    color = clap::ColorChoice::Auto,
+    styles = clap_styles()
 )]
 struct Args {
     /// Target value T to approximate
@@ -122,18 +125,19 @@ fn main() {
     let result_cnt = args.result_cnt;
 
     println!();
-    println!("  epi-search (Targeted Iterative Search)");
-    println!("  -------------------------------------");
-    println!("  target:    {}", target);
-    println!("  ops/term:  {:?}", args.max_ops);
-    println!("  terms:     {}", terms_count);
-    println!("  top_k:     {}", top_k);
-    println!("  results:   {}", result_cnt);
+    println!("  {}", cli_title("epi-search (Targeted Iterative Search)"));
+    println!("  {}", cli_title("-------------------------------------"));
+    println!("  {} {}", cli_label("target:"), target);
+    println!("  {} {:?}", cli_label("ops/term:"), args.max_ops);
+    println!("  {} {}", cli_label("terms:"), terms_count);
+    println!("  {} {}", cli_label("top_k:"), top_k);
+    println!("  {} {}", cli_label("results:"), result_cnt);
     println!(
-        "  workspace: {} (per block search)",
+        "  {} {} (per block search)",
+        cli_label("workspace:"),
         fmt_num(workspace_size)
     );
-    println!("  constants: {:?}", args.constants);
+    println!("  {} {:?}", cli_label("constants:"), args.constants);
     println!();
 
     let start_time = Instant::now();
@@ -141,7 +145,7 @@ fn main() {
     let init_nodes = get_init_nodes(&args.constants);
 
     // Initial pool
-    println!("  Generating initial pool...");
+    println!("  {}", cli_title("Generating initial pool..."));
     let mut pool = run_block_search(
         target,
         init_nodes.clone(),
@@ -160,7 +164,12 @@ fn main() {
 
     // Iterative refinement
     for step in 2..=terms_count {
-        println!("\n  Iterative step {}/{} ...", step, terms_count);
+        println!(
+            "\n  {} {}/{} ...",
+            cli_title("Iterative step"),
+            step,
+            terms_count
+        );
 
         use rayon::prelude::*;
 
@@ -263,8 +272,13 @@ fn main() {
                 best_err = abs_err;
                 best_match = best.clone();
             }
-            println!("  Best error after step {}: {:+.e}", step, err);
-            println!("  Expr: {}", best_match.to_string());
+            println!(
+                "  {} {}: {}",
+                cli_label("Best error after step"),
+                step,
+                cli_good(&format!("{:+.e}", err))
+            );
+            println!("  {} {}", cli_label("Expr:"), best_match.to_string());
         }
     }
 
@@ -287,16 +301,16 @@ fn main() {
     });
 
     println!();
-    println!("  result (positive first)");
-    println!("  -----------------------------------------------");
-    println!("  time: {:.2?}", elapsed);
+    println!("  {}", cli_title("result (positive first)"));
+    println!("  {}", cli_title("-----------------------------------------------"));
+    println!("  {} {:.2?}", cli_label("time:"), elapsed);
     println!();
 
     for (idx, node) in pool.iter().enumerate().take(result_cnt) {
         let err = node.val - target;
-        println!("  #{} [{:+.e}]", idx + 1, err);
-        println!("  Value: {}", node.val);
-        println!("  Expr:  {}", node.to_string());
+        println!("  {} [{}]", cli_title(&format!("#{}", idx + 1)), cli_good(&format!("{:+.e}", err)));
+        println!("  {} {}", cli_label("Value:"), node.val);
+        println!("  {}  {}", cli_label("Expr:"), node.to_string());
         println!();
     }
 
