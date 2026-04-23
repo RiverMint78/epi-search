@@ -6,6 +6,69 @@
 
 基于简单数学常数近似的表达式搜索器, 算法可描述为 **启发式的迭代 BFS**, 精度为 `double`.
 
+## CLI 使用
+
+### 构建
+
+```bash
+cargo build --release
+```
+
+### 运行示例
+
+```bash
+cargo run --release -- -T 114514 -m 4,5,5 -n 3 -k 64 -r 16 --constants e,pi,phi
+```
+
+### 参数说明
+
+- `-T, --target <FLOAT>`
+  - 目标值
+- `-m, --max-ops <INT[,INT,...]>`
+  - 每轮块搜索深度. 可传逗号列表; 若轮数超过列表长度, 后续沿用最后一个值
+  - 默认: `4`
+- `-n, --terms <INT>`
+  - 迭代轮数
+  - 默认: `3`, 这意味着结果形如 $X \pm Y \pm Z$, 其中 $X, Y, Z$ 的深度都不超过 `max-ops`
+- `-k, --top-k <INT>`
+  - 每轮保留的候选池大小
+  - 默认: `20`
+- `-w, --workspace-size <INT>`
+  - 单次块搜索可保留的总工作区预算
+  - 默认: `5000000`
+- `-g, --gen-limit <INT>`
+  - 单次块搜索的生成上限
+  - 默认: `100000000`
+- `-c, --constants <NAME[,NAME,...]>`
+  - 初始常量集合
+  - 默认: `e,pi`
+- `-r, --result-cnt <INT>`
+  - 最终输出结果数量
+  - 默认: `5`
+
+## Sympy 验证
+
+`analyze.py` 用于对表达式做符号化与 LaTeX/数值验证.
+
+安装依赖:
+
+```bash
+pip install sympy
+```
+
+示例:
+
+```bash
+python3 analyze.py "((pi^2)+e)"
+```
+
+输出:
+
+- 原式与化简式
+- 展开式
+- LaTeX 表达
+- `64` 位精度的数值结果
+
 ## 算法概览
 
 ### Expression
@@ -36,8 +99,8 @@
 
 设当前表达式为 $E$, 目标为 $T$.
 
-- 计算残差 $r_1 = T - E$, 搜索修正项 $X$, 构造 $E + X$
-- 计算残差 $r_2 = E - T$, 搜索修正项 $Y$, 构造 $E - Y$
+- 计算残差 $r_1 = T - E$, 搜索残差 $r_1$, 构造 $E + r_1$
+- 计算残差 $r_2 = E - T$, 搜索残差 $r_2$, 构造 $E - r_2$
 
 每轮对候选池中的每个表达式都做上面两次搜索, 汇总后:
 
@@ -79,7 +142,10 @@ $$
 
 每层还需要排序/截断, 设本层候选数为 $M_\ell$:
 
-- 若 $M_\ell > \text{limit}_\ell$: `select_nth` + 局部排序, 约 $O(M_\ell + \text{limit}_\ell\log\text{limit}_\ell)$
+- 若 $M_\ell > {\text{limit}}_\ell$:
+
+  `select_nth` + 局部排序, 约 $O(M_\ell + \text{limit} _\ell\log\text{limit} _\ell)$
+
 - 否则: 全排序 $O(M_\ell\log M_\ell)$
 
 所以单次 block search 总时间是:
@@ -129,6 +195,7 @@ $$
 设初始常量数量为 $c$, 令 $a_k$ 为恰好含 $k$ 次二元运算的可用表达式数量.
 
 叶节点:
+
 $$
 a_0 = c
 $$
@@ -143,25 +210,35 @@ $$
 
 #### 非对称算符 (-, /, ^)
 
-非对称算符输入的有序对 $(e_l, e_r)$ 各自构成不同的表达式, 共 $3\,S_{k-1}$ 种.
+非对称算符输入的有序对 $(e_l, e_r)$ 各自构成不同的表达式, 共 $3S_{k-1}$ 种.
 
-#### 对称算符 (+, \*)
+#### 对称算符 (+, *)
 
-仅在 $\mathrm{id}(e_l)\le\mathrm{id}(e_r)$ 时生成, 等价于对 $e_l, e_r$ 做无序对计数, 设 $m=(k-1)/2$, 无序对总数为:
+为了消除对称算符造成的重复, 算法规定仅在 $\mathrm{id}(e_l) \le \mathrm{id}(e_r)$ 时生成表达式, 等价于从可用子树集合中提取**可重无序对**.
+
+设 $m = (k-1)/2$, 无序对总数 $U_{k-1}$ 为:
+
 $$
-U_{k-1}
-= \underbrace{\frac{S_{k-1} - [2\mid(k-1)]\,a_m^2}{2}}_{\substack{i < j\text{ 的跨深度无序对}}}
-+ \underbrace{[2\mid(k-1)]\,\frac{a_m(a_m+1)}{2}}_{\substack{i=j=m\text{ 的同深度无序对}}}
-= \frac{S_{k-1}}{2} + [2\mid(k-1)]\,\frac{a_m}{2}
+U_{k-1} = \frac{S_{k-1}}{2} + \frac{[2\mid(k-1)] \cdot a_m}{2}
 $$
 
-对称算符构成 $2\,U_{k-1} = S_{k-1} + [2\mid(k-1)]\,a_m$ 种表达式.
+其中:
+
+- **跨深度无序对**：当左右子树运算量 $i \neq j$ 时, 有序对数量为 $S_{k-1} - [2\mid(k-1)]a_m^2$. 由于 $i, j$ 对称, 取一半
+- **同深度无序对**：当 $k-1$ 为偶数时, 可能出现左右子树运算量相同 ($i=j=m$) 的情况, 此时需从 $a_m$ 个表达式中挑选 2 个, 组合数为 $\binom{a_m+1}{2} = \frac{a_m(a_m+1)}{2}$
+
+所以, 对称算符构成的表达式数量为:
+
+$$
+2 \cdot U_{k-1} = S_{k-1} + [2\mid(k-1)] \cdot a_m
+$$
 
 #### 总表达式数量
 
 两者相加:
+
 $$
-a_k = 4\,S_{k-1} + [k\text{ 为奇数}]\cdot a_{(k-1)/2}
+a_k = 4S_{k-1} + [2\mid(k-1)]\cdot a_{(k-1)/2}
 $$
 
 总表达式数量:
@@ -188,15 +265,15 @@ $a_k$ 增长足够快, $A(d)\approx a_d$.
 将 $a_k$ 递推视为生成函数 $f(x)=\sum_{k\ge0}a_k x^k$, 忽略低阶修正项, 注意到:
 
 $$
-f(x) - c \approx 4x\,f(x)^2
+f(x) - c \approx 4xf(x)^2
 \implies f(x) = \frac{1-\sqrt{1-16cx}}{8x}
-= c\sum_{k=0}^{\infty}C_k\,(4c)^k\,x^k
+= c\sum_{k=0}^{\infty}C_k(4c)^kx^k
 $$
 
 其中 $C_k=\frac{1}{k+1}\binom{2k}{k}$ 为第 $k$ 个卡特兰数，利用 $C_k\sim\frac{4^k}{k^{3/2}\sqrt\pi}$, 可得:
 
 $$
-a_k \;\sim\; \frac{c}{\sqrt\pi}\cdot\frac{(16c)^k}{k^{3/2}}
+a_k \sim \frac{c}{\sqrt\pi}\cdot\frac{(16c)^k}{k^{3/2}}
 $$
 
 即每增加一层运算, 表达式数量约乘以 $16c$. 对默认 `e,pi` ($c=2$) 约乘以 **32**, 对 `e,pi,phi` ($c=3$) 约乘以 **48**, 以此类推.
@@ -206,19 +283,19 @@ $$
 单次 block search 需要遍历同量级的候选:
 
 $$
-T_{block}(d) = \Theta\!\left(\sum_{k=0}^{d} a_k\right) \approx \Theta(a_d) = \Theta\!\left(\frac{(16c)^d}{d^{3/2}}\right)
+T_{block}(d) = \Theta\left(\sum_{k=0}^{d} a_k\right) \approx \Theta(a_d) = \Theta\left(\frac{(16c)^d}{d^{3/2}}\right)
 $$
 
 总时间估计为:
 
 $$
-T_{total}=\Theta\!\left(\frac{(16c)^{m_1}}{m_1^{3/2}}+2K\sum_{s=2}^{N}\frac{(16c)^{m_s}}{m_s^{3/2}}\right)
+T_{total}=\Theta\left(\frac{(16c)^{m_1}}{m_1^{3/2}}+2K\sum_{s=2}^{N}\frac{(16c)^{m_s}}{m_s^{3/2}}\right)
 $$
 
 若各轮深度相同 $m$:
 
 $$
-T_{total}=\Theta\!\left((1+2K(N-1))\cdot\frac{(16c)^m}{m^{3/2}}\right)
+T_{total}=\Theta\left((1+2K(N-1))\cdot\frac{(16c)^m}{m^{3/2}}\right)
 $$
 
 结论是，`max_ops` 每增加 1, **总**运行时间约乘以 $16c$; 就时间复杂度来说, `max_ops` 是最敏感参数.
@@ -231,74 +308,11 @@ $$
 | **e** | 自然常数 (Euler's Number, $e$) | $2.71828$ |
 | **pi** | 圆周率 (Archimedes' Constant, $\pi$) | $3.14159$ |
 | **phi** | 黄金分割比 (Golden Ratio, $\phi$) | $1.61803$ |
-| **sqrt2** | 2的算术平方根 (Pythagoras' Constant, $\sqrt(2)$) | $1.41421$ |
-| **ln2** | 2的自然对数 (Natural Log of 2, $\ln(2)$) | $0.69315$ |
+| **sqrt2** | 2的算术平方根 (Pythagoras' Constant, $\sqrt{2}$) | $1.41421$ |
+| **ln2** | 2的自然对数 (Natural Log of 2, $\ln{2}$) | $0.69315$ |
 | **gamma** | 欧拉-马斯克若尼常数 (Euler-Mascheroni Constant, $\gamma$) | $0.57722$ |
 | **C** | 卡塔兰常数 (Catalan's Constant, $C$) | $0.91597$ |
-| **zeta3** | 阿培里常数 (Apéry's Constant, $\zeta(3)$) | $1.20206$ |
+| **zeta3** | 阿培里常数 (Apéry's Constant, $\zeta{(3)}$) | $1.20206$ |
 | **A** | 格莱舍-金克林常数 (Glaisher-Kinkelin Constant, $A$) | $1.28243$ |
 | **delta** | 第一费根鲍姆常数 (First Feigenbaum Constant, $\delta$) | $4.66920$ |
 | **alpha** | 第二费根鲍姆常数 (Second Feigenbaum Constant, $\alpha$) | $2.50291$ |
-
-## CLI 使用
-
-### 构建
-
-```bash
-cargo build --release
-```
-
-### 运行示例
-
-```bash
-cargo run --release -- -T 114514 -m 4,5,5 -n 3 -k 64 -r 16 --constants e,pi,phi
-```
-
-### 参数说明
-
-- `-T, --target <FLOAT>`
-  - 目标值
-- `-m, --max-ops <INT[,INT,...]>`
-  - 每轮块搜索深度.可传逗号列表；若轮数超过列表长度, 后续沿用最后一个值
-  - 默认: `4`
-- `-n, --terms <INT>`
-  - 迭代轮数
-  - 默认: `3`, 这意味着结果形如 $X \pm Y \pm Z$, 其中 $X, Y, Z$ 的深度都不超过 `max-ops`
-- `-k, --top-k <INT>`
-  - 每轮保留的候选池大小
-  - 默认: `20`
-- `-w, --workspace-size <INT>`
-  - 单次块搜索可保留的总工作区预算
-  - 默认: `5000000`
-- `-g, --gen-limit <INT>`
-  - 单次块搜索的生成上限
-  - 默认: `100000000`
-- `-c, --constants <NAME[,NAME,...]>`
-  - 初始常量集合
-  - 默认: `e,pi`
-- `-r, --result-cnt <INT>`
-  - 最终输出结果数量
-  - 默认: `5`
-
-## Sympy 验证
-
-`analyze.py` 用于对表达式做符号化与 LaTeX/数值验证.
-
-安装依赖:
-
-```bash
-pip install sympy
-```
-
-示例:
-
-```bash
-python3 analyze.py "((pi^2)+e)"
-```
-
-输出:
-
-- 原式与化简式
-- 展开式
-- LaTeX 表达
-- `64` 位精度的数值结果
