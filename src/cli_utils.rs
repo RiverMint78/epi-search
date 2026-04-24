@@ -1,5 +1,5 @@
-use std::io::{self, Write};
 use std::io::IsTerminal;
+use std::io::{self, Write};
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -68,14 +68,11 @@ fn fmt_duration(d: Duration) -> String {
 }
 
 pub fn get_max_ops(max_ops: &[usize], step: usize) -> usize {
-    let idx = step - 1;
-    if max_ops.len() == 1 {
-        max_ops[0]
-    } else if idx < max_ops.len() {
-        max_ops[idx]
-    } else {
-        *max_ops.last().unwrap_or(&4)
-    }
+    max_ops
+        .get(step.saturating_sub(1))
+        .or_else(|| max_ops.last())
+        .copied()
+        .expect("max_ops slice cannot be empty")
 }
 
 pub fn get_init_nodes(names: &[String]) -> Vec<Arc<epi_search::MathNode>> {
