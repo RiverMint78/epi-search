@@ -66,15 +66,21 @@ fn run_block_search(
     label: &str,
     silent: bool,
 ) -> Vec<std::sync::Arc<epi_search::MathNode>> {
-    let mut limits = Vec::with_capacity(max_ops);
-    let sum_weights: usize = (1..=max_ops).sum();
-    for k in 1..=max_ops {
-        let weight = k;
-        let limit = (workspace_size as f64 * weight as f64 / sum_weights as f64) as usize;
-        limits.push(limit.max(1));
-    }
+    let weights: Vec<f64> = (1..=max_ops).map(|k| 16.0_f64.powi(k as i32)).collect();
+    let sum_weights: f64 = weights.iter().sum();
 
-    let mut env = epi_search::SearchEnv::new(target, init_nodes, limits, gen_limit);
+    let (max_nodes, max_gen_nodes): (Vec<usize>, Vec<usize>) = weights
+        .iter()
+        .map(|&w| {
+            let ratio = w / sum_weights;
+            (
+                (workspace_size as f64 * ratio) as usize,
+                (gen_limit as f64 * ratio) as usize,
+            )
+        })
+        .unzip();
+
+    let mut env = epi_search::SearchEnv::new(target, init_nodes, max_nodes, max_gen_nodes);
 
     if !silent {
         for k in 1..=max_ops {
@@ -85,12 +91,12 @@ fn run_block_search(
                 "comb/s",
             );
 
-            env.search_next_level(|inc| progress.inc(inc as u64), |_status| ());
+            env.search_next_level(|inc| progress.inc(inc as u64));
             progress.finish();
         }
     } else {
         for _ in 1..=max_ops {
-            env.search_next_level(|_| (), |_| ());
+            env.search_next_level(|_| ());
         }
     }
 
@@ -111,7 +117,7 @@ fn run_block_search(
         }
     });
 
-    all_candidates.dedup_by(|a, b| (a.val - b.val).abs() < 1e-18);
+    all_candidates.dedup_by(|a, b| (a.val - b.val).abs() < 1e-30);
     all_candidates
 }
 
@@ -170,8 +176,6 @@ fn main() {
             step,
             terms_count
         );
-
-        use rayon::prelude::*;
 
         let progress = Arc::new(StdProgress::new(
             "[Refining]".to_string(),
@@ -302,13 +306,20 @@ fn main() {
 
     println!();
     println!("  {}", cli_title("result (positive first)"));
-    println!("  {}", cli_title("-----------------------------------------------"));
+    println!(
+        "  {}",
+        cli_title("-----------------------------------------------")
+    );
     println!("  {} {:.2?}", cli_label("time:"), elapsed);
     println!();
 
     for (idx, node) in pool.iter().enumerate().take(result_cnt) {
         let err = node.val - target;
-        println!("  {} [{}]", cli_title(&format!("#{}", idx + 1)), cli_good(&format!("{:+.e}", err)));
+        println!(
+            "  {} [{}]",
+            cli_title(&format!("#{}", idx + 1)),
+            cli_good(&format!("{:+.e}", err))
+        );
         println!("  {} {}", cli_label("Value:"), node.val);
         println!("  {}  {}", cli_label("Expr:"), node.to_string());
         println!();

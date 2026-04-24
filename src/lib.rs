@@ -60,7 +60,7 @@ pub struct SearchEnv {
     pub best_match: Arc<MathNode>,
     pub best_diff: f64,
     pub max_nodes: Vec<usize>,
-    pub max_gen_nodes: usize,
+    pub max_gen_nodes: Vec<usize>,
     pub next_id: u32,
 }
 
@@ -70,17 +70,17 @@ impl SearchEnv {
         target: f64,
         init_nodes: Vec<Arc<MathNode>>,
         max_nodes: Vec<usize>,
-        max_gen_nodes: usize,
+        max_gen_nodes: Vec<usize>,
     ) -> Self {
         let best_match = init_nodes[0].clone();
         let best_diff = (best_match.val - target).abs();
 
-        let mut next_id = 0;
-        for node in &init_nodes {
-            if node.id >= next_id {
-                next_id = node.id + 1;
-            }
-        }
+        let next_id = init_nodes
+            .iter()
+            .map(|node| node.id)
+            .max()
+            .map(|max_id| max_id + 1)
+            .unwrap_or(0);
 
         Self {
             target,
@@ -110,34 +110,26 @@ impl SearchEnv {
         let left_nodes_all = &self.levels[i];
         let right_nodes_all = &self.levels[j];
 
-        if self.max_gen_nodes > 0 {
-            let quota = self.max_gen_nodes / k;
-            let pair_limit = (quota / 5).max(1);
+        let quota = self.max_gen_nodes.get(k - 1).cloned().unwrap_or(usize::MAX);
+        let pair_limit = (quota / 5).max(1); // + * - / ^
 
-            let n_target = (pair_limit as f64).sqrt() as usize;
+        let n_target = (pair_limit as f64).sqrt() as usize;
 
-            let n_left_tmp = left_nodes_all.len().min(n_target);
-            let n_right = right_nodes_all.len().min(pair_limit / n_left_tmp.max(1));
+        let n_left_tmp = left_nodes_all.len().min(n_target);
+        let n_right = right_nodes_all.len().min(pair_limit / n_left_tmp.max(1));
+        let n_left = left_nodes_all.len().min(pair_limit / n_right.max(1));
 
-            let n_left = left_nodes_all.len().min(pair_limit / n_right.max(1));
-
-            (&left_nodes_all[..n_left], &right_nodes_all[..n_right])
-        } else {
-            (left_nodes_all.as_slice(), right_nodes_all.as_slice())
-        }
+        (&left_nodes_all[..n_left], &right_nodes_all[..n_right])
     }
 
     /// Parallel generate next level expressions
-    pub fn search_next_level<F, S>(&mut self, progress_cb: F, status_cb: S) -> (usize, usize)
+    pub fn search_next_level<F>(&mut self, progress_cb: F) -> (usize, usize)
     where
         F: Fn(u64) + Sync + Send,
-        S: Fn(&str),
     {
         let k = self.levels.len();
         let target = self.target;
         let progress_cb = Arc::new(progress_cb);
-
-        status_cb("generating");
 
         // Get thread count for chunking
         let num_threads = rayon::current_num_threads();
@@ -198,7 +190,6 @@ impl SearchEnv {
         // Sort and truncate
         let limit = self.max_nodes.get(k - 1).cloned().unwrap_or(usize::MAX);
 
-        status_cb("sorting");
         let cmp_func = |a: &Arc<MathNode>, b: &Arc<MathNode>| {
             let diff_a = (a.val - target).abs();
             let diff_b = (b.val - target).abs();
