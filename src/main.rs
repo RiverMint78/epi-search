@@ -63,6 +63,7 @@ fn run_block_search(
     max_ops: usize,
     workspace_size: usize,
     gen_limit: usize,
+    top_k: usize,
     label: &str,
     silent: bool,
 ) -> Vec<std::sync::Arc<epi_search::MathNode>> {
@@ -105,9 +106,16 @@ fn run_block_search(
         all_candidates.extend(level.iter().cloned());
     }
 
-    all_candidates.par_sort_unstable_by(|a, b| {
+    let retain_k = (top_k * 2).min(all_candidates.len());
+
+    if retain_k == 0 {
+        return Vec::new();
+    }
+
+    let node_cmp = |a: &Arc<epi_search::MathNode>, b: &Arc<epi_search::MathNode>| {
         let diff_a = (a.val - target).abs();
         let diff_b = (b.val - target).abs();
+
         if (diff_a - diff_b).abs() < 1e-18 {
             a.complexity.cmp(&b.complexity)
         } else {
@@ -115,10 +123,17 @@ fn run_block_search(
                 .partial_cmp(&diff_b)
                 .unwrap_or(std::cmp::Ordering::Equal)
         }
-    });
+    };
 
-    all_candidates.dedup_by(|a, b| (a.val - b.val).abs() < 1e-30);
-    all_candidates
+    let (top_part, _, _) = all_candidates.select_nth_unstable_by(retain_k - 1, node_cmp);
+
+    let mut final_candidates = top_part.to_vec();
+
+    final_candidates.sort_unstable_by(node_cmp);
+
+    final_candidates.dedup_by(|a, b| (a.val - b.val).abs() < 1e-30);
+
+    final_candidates
 }
 
 fn main() {
@@ -158,6 +173,7 @@ fn main() {
         get_max_ops(&args.max_ops, 1),
         workspace_size,
         gen_limit,
+        top_k,
         "Initial",
         false,
     );
@@ -202,6 +218,7 @@ fn main() {
                     current_max_ops,
                     sub_workspace,
                     sub_gen_limit,
+                    top_k,
                     "",
                     true,
                 );
@@ -226,6 +243,7 @@ fn main() {
                     current_max_ops,
                     sub_workspace,
                     sub_gen_limit,
+                    top_k,
                     "",
                     true,
                 );
