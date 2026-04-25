@@ -67,7 +67,7 @@ fn run_block_search(
     label: &str,
     silent: bool,
 ) -> Vec<std::sync::Arc<epi_search::MathNode>> {
-    let weights: Vec<f64> = (1..=max_ops).map(|k| 16.0_f64.powi(k as i32)).collect();
+    let weights: Vec<f64> = (0..max_ops).map(|k| (1 << k) as f64).collect();
     let sum_weights: f64 = weights.iter().sum();
 
     let (max_nodes, max_gen_nodes): (Vec<usize>, Vec<usize>) = weights
@@ -106,7 +106,7 @@ fn run_block_search(
         all_candidates.extend(level.iter().cloned());
     }
 
-    let retain_k = (top_k * 2).min(all_candidates.len());
+    let retain_k = (top_k * 5).min(all_candidates.len());
 
     if retain_k == 0 {
         return Vec::new();
@@ -116,13 +116,11 @@ fn run_block_search(
         let diff_a = (a.val - target).abs();
         let diff_b = (b.val - target).abs();
 
-        if (diff_a - diff_b).abs() < 1e-18 {
-            a.complexity.cmp(&b.complexity)
-        } else {
-            diff_a
-                .partial_cmp(&diff_b)
-                .unwrap_or(std::cmp::Ordering::Equal)
-        }
+        diff_a
+            .total_cmp(&diff_b)
+            .then_with(|| a.complexity.cmp(&b.complexity))
+            .then_with(|| a.val.total_cmp(&b.val))
+            .then_with(|| a.id.cmp(&b.id))
     };
 
     let (top_part, _, _) = all_candidates.select_nth_unstable_by(retain_k - 1, node_cmp);
@@ -272,13 +270,12 @@ fn main() {
         combined_pool.par_sort_unstable_by(|a, b| {
             let diff_a = (a.val - target).abs();
             let diff_b = (b.val - target).abs();
-            if (diff_a - diff_b).abs() < 1e-18 {
-                a.complexity.cmp(&b.complexity)
-            } else {
-                diff_a
-                    .partial_cmp(&diff_b)
-                    .unwrap_or(std::cmp::Ordering::Equal)
-            }
+
+            diff_a
+                .total_cmp(&diff_b)
+                .then_with(|| a.complexity.cmp(&b.complexity))
+                .then_with(|| a.val.total_cmp(&b.val))
+                .then_with(|| a.id.cmp(&b.id))
         });
 
         // Deduplicate by value
@@ -317,8 +314,10 @@ fn main() {
             // If both same side, prefer smaller absolute error
             (a.val - target)
                 .abs()
-                .partial_cmp(&(b.val - target).abs())
-                .unwrap_or(std::cmp::Ordering::Equal)
+                .total_cmp(&(b.val - target).abs())
+                .then_with(|| a.complexity.cmp(&b.complexity))
+                .then_with(|| a.val.total_cmp(&b.val))
+                .then_with(|| a.id.cmp(&b.id))
         }
     });
 

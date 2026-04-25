@@ -190,25 +190,23 @@ impl SearchEnv {
         // Sort and truncate
         let limit = self.max_nodes.get(k - 1).cloned().unwrap_or(usize::MAX);
 
-        let cmp_func = |a: &Arc<MathNode>, b: &Arc<MathNode>| {
+        let node_cmp = |a: &Arc<MathNode>, b: &Arc<MathNode>| {
             let diff_a = (a.val - target).abs();
             let diff_b = (b.val - target).abs();
 
-            if (diff_a - diff_b).abs() < 1e-12_f64 {
-                a.complexity.cmp(&b.complexity)
-            } else {
-                diff_a
-                    .partial_cmp(&diff_b)
-                    .unwrap_or(std::cmp::Ordering::Equal)
-            }
+            diff_a
+                .total_cmp(&diff_b)
+                .then_with(|| a.complexity.cmp(&b.complexity))
+                .then_with(|| a.val.total_cmp(&b.val))
+                .then_with(|| a.id.cmp(&b.id))
         };
 
         if current_level.len() > limit {
-            current_level.select_nth_unstable_by(limit, cmp_func);
+            current_level.select_nth_unstable_by(limit, node_cmp);
             current_level.truncate(limit);
-            current_level.par_sort_unstable_by(cmp_func);
+            current_level.par_sort_unstable_by(node_cmp);
         } else {
-            current_level.par_sort_unstable_by(cmp_func);
+            current_level.par_sort_unstable_by(node_cmp);
         }
 
         for (i, node_arc) in current_level.iter_mut().enumerate() {
